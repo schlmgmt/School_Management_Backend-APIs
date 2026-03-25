@@ -46,6 +46,32 @@ A comprehensive backend API for managing schools, admins, users, and authenticat
 - Password reset links with 24-hour expiration
 - HTML formatted professional emails
 
+### Student & Teacher Management
+- Create and manage students with email onboarding
+- Create and manage teachers with public profiles
+- Track student enrollment, roll numbers, and dates of birth
+- Student and teacher status management
+
+### Class & Section Management
+- Organize students into classes and sections
+- Assign class teachers to sections
+- Track class and section activity status
+- Hierarchical class structure
+
+### Teacher-Class Assignments
+- Assign teachers to specific classes and sections
+- Track subject assignments
+- Maintain unique mapping constraints
+- Support multi-section teaching
+
+### Attendance System
+- Bulk attendance marking for multiple students
+- Class-date-based attendance tracking
+- Duplicate attendance prevention (one per student per day)
+- Role-based access (class teachers only)
+- Attendance history tracking and retrieval
+- Status tracking (present/absent)
+
 ---
 
 ## 🛠️ Tech Stack
@@ -79,27 +105,52 @@ schl_mgmt_bknd/
 │   │   └── models/
 │   │       ├── user.py         # User model
 │   │       ├── school.py       # School model
-│   │       └── role.py         # Role model
+│   │       ├── role.py         # Role model
+│   │       ├── student.py      # Student model
+│   │       ├── teacher.py      # Teacher model
+│   │       ├── class_model.py  # Class model
+│   │       ├── section.py      # Section model
+│   │       ├── teacher_class_mapping.py  # Teacher-Class assignment
+│   │       └── attendance.py   # Attendance model
 │   │
 │   ├── schemas/
 │   │   ├── input/              # Request schemas
 │   │   │   ├── auth_input.py
 │   │   │   ├── school_input.py
-│   │   │   └── admin_input.py
+│   │   │   ├── admin_input.py
+│   │   │   ├── student_input.py
+│   │   │   ├── teacher_input.py
+│   │   │   ├── class_input.py
+│   │   │   ├── teacher_class_mapping_input.py
+│   │   │   └── attendance_input.py
 │   │   └── output/             # Response schemas
 │   │       ├── auth_output.py
 │   │       ├── school_output.py
-│   │       └── admin_output.py
+│   │       ├── admin_output.py
+│   │       ├── student_output.py
+│   │       ├── teacher_output.py
+│   │       ├── class_output.py
+│   │       └── attendance_output.py
 │   │
 │   ├── services/               # Business logic
 │   │   ├── auth_service.py
 │   │   ├── school_service.py
-│   │   └── user_service.py
+│   │   ├── user_service.py
+│   │   ├── student_service.py
+│   │   ├── teacher_service.py
+│   │   ├── class_service.py
+│   │   ├── teacher_class_mapping_service.py
+│   │   └── attendance_service.py
 │   │
 │   ├── routes/                 # API endpoints
 │   │   ├── auth_routes.py
 │   │   ├── school_routes.py
-│   │   └── user_routes.py
+│   │   ├── user_routes.py
+│   │   ├── student_routes.py
+│   │   ├── teacher_routes.py
+│   │   ├── class_routes.py
+│   │   ├── teacher_class_mapping_routes.py
+│   │   └── attendance_routes.py
 │   │
 │   └── utils/
 │       ├── common.py           # Common utilities
@@ -353,6 +404,268 @@ Response:
 }
 ```
 
+### Student Routes (`/students`)
+
+#### Create Student (Admin only)
+```
+POST /students
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "user_name": "John Smith",
+  "email": "john@example.com",
+  "class_id": 1,
+  "section_id": 1,
+  "roll_number": "10001",
+  "date_of_birth": "2010-05-15",
+  "admission_date": "2023-06-01"
+}
+
+Response:
+{
+  "student_id": 1,
+  "user_id": 10,
+  "user_name": "John Smith",
+  "email": "john@example.com",
+  "class_id": 1,
+  "section_id": 1,
+  "roll_number": "10001",
+  "date_of_birth": "2010-05-15",
+  "admission_date": "2023-06-01",
+  "is_active": true,
+  "created_at": "2024-03-22T10:35:00",
+  "message": "Student created successfully. Onboarding email has been sent."
+}
+```
+
+#### List Students (Admin gets all, Student gets own)
+```
+GET /students
+Authorization: Bearer <token>
+
+Response:
+[
+  {
+    "student_id": 1,
+    "user_name": "John Smith",
+    "email": "john@example.com",
+    "class_id": 1,
+    "section_id": 1,
+    "roll_number": "10001"
+  }
+]
+```
+
+### Teacher Routes (`/teachers`)
+
+#### Create Teacher (Admin only)
+```
+POST /teachers
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "user_name": "Jane Doe",
+  "email": "jane@example.com",
+  "specialization": "Mathematics",
+  "date_of_joining": "2023-06-01"
+}
+
+Response:
+{
+  "teacher_id": 1,
+  "user_id": 11,
+  "user_name": "Jane Doe",
+  "email": "jane@example.com",
+  "specialization": "Mathematics",
+  "date_of_joining": "2023-06-01",
+  "is_active": true,
+  "created_at": "2024-03-22T10:35:00",
+  "message": "Teacher created successfully. Onboarding email has been sent."
+}
+```
+
+#### List Teachers (Public - Everyone can view)
+```
+GET /teachers
+
+Response:
+[
+  {
+    "teacher_id": 1,
+    "user_name": "Jane Doe",
+    "email": "jane@example.com",
+    "specialization": "Mathematics"
+  }
+]
+```
+
+### Class Routes (`/classes`)
+
+#### Create Class (Admin only)
+```
+POST /classes
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "class_name": "10th Grade",
+  "is_active": true
+}
+
+Response:
+{
+  "class_id": 1,
+  "school_id": 1,
+  "class_name": "10th Grade",
+  "is_active": true,
+  "created_at": "2024-03-22T10:35:00"
+}
+```
+
+### Section Routes (`/sections`)
+
+#### Create Section (Admin only)
+```
+POST /sections
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "class_id": 1,
+  "section_name": "A",
+  "class_teacher_id": 1
+}
+
+Response:
+{
+  "section_id": 1,
+  "class_id": 1,
+  "class_teacher_id": 1,
+  "section_name": "A",
+  "is_active": true,
+  "created_at": "2024-03-22T10:35:00"
+}
+```
+
+### Attendance Routes (`/api/v1/attendance`)
+
+#### Mark Attendance (Class Teacher only)
+```
+POST /api/v1/attendance
+Authorization: Bearer <teacher_token>
+Content-Type: application/json
+
+{
+  "class_id": 1,
+  "section_id": 1,
+  "date": "2026-03-25",
+  "students": [
+    { "student_id": 1, "status": "present" },
+    { "student_id": 2, "status": "absent" },
+    { "student_id": 3, "status": "present" }
+  ]
+}
+
+Response:
+{
+  "class_id": 1,
+  "section_id": 1,
+  "date": "2026-03-25",
+  "total_marked": 3,
+  "attendance_records": [
+    {
+      "attendance_id": 1,
+      "student_id": 1,
+      "class_id": 1,
+      "section_id": 1,
+      "date": "2026-03-25",
+      "status": "present",
+      "marked_by": 5,
+      "created_at": "2024-03-22T10:35:00",
+      "updated_at": "2024-03-22T10:35:00"
+    },
+    ...
+  ]
+}
+```
+
+#### Get Attendance (Class Teacher only)
+```
+GET /api/v1/attendance?class_id=1&section_id=1&date=2026-03-25
+Authorization: Bearer <teacher_token>
+
+Response:
+[
+  {
+    "attendance_id": 1,
+    "student_id": 1,
+    "class_id": 1,
+    "section_id": 1,
+    "date": "2026-03-25",
+    "status": "present",
+    "marked_by": 5,
+    "created_at": "2024-03-22T10:35:00"
+  }
+]
+```
+
+#### Get Student Attendance History (Teacher/Admin)
+```
+GET /api/v1/attendance/student/{student_id}
+Authorization: Bearer <token>
+
+Response:
+[
+  {
+    "attendance_id": 1,
+    "student_id": 1,
+    "class_id": 1,
+    "section_id": 1,
+    "date": "2026-03-25",
+    "status": "present",
+    "marked_by": 5,
+    "created_at": "2024-03-22T10:35:00"
+  },
+  {
+    "attendance_id": 2,
+    "student_id": 1,
+    "class_id": 1,
+    "section_id": 1,
+    "date": "2026-03-24",
+    "status": "absent",
+    "marked_by": 5,
+    "created_at": "2024-03-22T10:30:00"
+  }
+]
+```
+
+#### Update Attendance Status (Class Teacher only)
+```
+PUT /api/v1/attendance
+Authorization: Bearer <teacher_token>
+Content-Type: application/json
+
+{
+  "attendance_id": 1,
+  "status": "absent"
+}
+
+Response:
+{
+  "attendance_id": 1,
+  "student_id": 1,
+  "class_id": 1,
+  "section_id": 1,
+  "date": "2026-03-25",
+  "status": "absent",
+  "marked_by": 5,
+  "created_at": "2024-03-22T10:35:00",
+  "updated_at": "2024-03-22T10:40:00"
+}
+```
+
 ---
 
 ## 🔐 Authentication
@@ -428,6 +741,80 @@ CreatedAt   # Creation timestamp
 UpdatedAt   # Last update timestamp
 ```
 
+#### Student Model
+```python
+StudentId         # Primary key
+UserId            # Foreign key to User
+Email             # Email address (unique)
+ClassId           # Foreign key to Class
+SectionId         # Foreign key to Section
+RollNumber        # Student roll number
+DateOfBirth       # Date of birth
+AdmissionDate     # Admission date
+IsActive          # Active status
+CreatedAt         # Creation timestamp
+UpdatedAt         # Last update timestamp
+```
+
+#### Teacher Model
+```python
+TeacherId         # Primary key
+UserId            # Foreign key to User
+Email             # Email address (unique)
+Specialization    # Subject/specialization
+DateOfJoining     # Joining date
+IsActive          # Active status
+CreatedAt         # Creation timestamp
+UpdatedAt         # Last update timestamp
+```
+
+#### Class Model
+```python
+ClassId           # Primary key
+SchoolId          # Foreign key to School
+ClassName         # Class name (e.g., "10th", "12th")
+IsActive          # Active status
+CreatedAt         # Creation timestamp
+UpdatedAt         # Last update timestamp
+```
+
+#### Section Model
+```python
+SectionId         # Primary key
+ClassId           # Foreign key to Class
+ClassTeacherId    # Foreign key to Teacher (class teacher)
+SectionName       # Section name (e.g., "A", "B", "C")
+IsActive          # Active status
+CreatedAt         # Creation timestamp
+UpdatedAt         # Last update timestamp
+```
+
+#### TeacherClassMapping Model
+```python
+TeacherClassMappingId  # Primary key
+TeacherId              # Foreign key to Teacher
+ClassId                # Foreign key to Class
+SectionId              # Foreign key to Section
+Subject                # Subject taught
+CreatedAt              # Creation timestamp
+UpdatedAt              # Last update timestamp
+Unique Constraint: (TeacherId, ClassId, SectionId)
+```
+
+#### Attendance Model
+```python
+AttendanceId      # Primary key
+StudentId         # Foreign key to Student
+ClassId           # Foreign key to Class
+SectionId         # Foreign key to Section
+Date              # Attendance date
+Status            # Attendance status (present/absent)
+MarkedBy          # Foreign key to Teacher who marked
+CreatedAt         # Creation timestamp
+UpdatedAt         # Last update timestamp
+Unique Constraint: (StudentId, Date)
+```
+
 ---
 
 ## ▶️ Running the Application
@@ -501,12 +888,29 @@ $response | ConvertTo-Json
 - `POST /auth/refresh` - Refresh access token
 - `POST /auth/forgot-password` - Request password reset
 - `POST /auth/reset-password` - Reset password with token
+- `GET /teachers` - List all teachers
 
-### Authentication Required
+### Authentication Required (Admin only)
 - `POST /auth/change-password` - Change password (logged-in user)
 - `POST /schools` - Create school (Super Admin only)
 - `GET /schools` - List schools (Super Admin only)
 - `POST /schools/{school_id}/admin` - Create admin (Super Admin only)
+- `POST /students` - Create student
+- `GET /students` - List students (admin: all, student: self)
+- `POST /teachers` - Create teacher
+- `POST /classes` - Create class
+- `GET /classes` - List classes
+- `POST /sections` - Create section
+- `GET /sections` - List sections
+- `POST /api/v1/teacher-class-mapping` - Assign teacher to class
+
+### Authentication Required (Teacher only)
+- `POST /api/v1/attendance` - Mark attendance (class teacher only)
+- `GET /api/v1/attendance` - Get attendance by class/date (assigned teacher)
+- `PUT /api/v1/attendance` - Update attendance (class teacher only)
+
+### Authentication Required (Teacher/Admin)
+- `GET /api/v1/attendance/student/{student_id}` - Get student attendance history
 
 ---
 

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from ..db.models.user import User
+from ..db.models.school import School
 from ..core.security import verify_password, create_access_token, create_refresh_token, decode_token, verify_password_reset_token, hash_password, generate_password_reset_token
 from ..utils.email_service import send_forgot_password_email
 
@@ -12,6 +13,19 @@ def login_user(db: Session, email: str, password: str):
 
     if not verify_password(password, user.Password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    # Check if school is active for non-super admin users (RoleId != 1)
+    if user.RoleId != 1:  # 1 = Super Admin
+        school = db.query(School).filter(School.SchoolId == user.SchoolId).first()
+        
+        if not school:
+            raise HTTPException(status_code=404, detail="School not found")
+        
+        if not school.IsActive:
+            raise HTTPException(
+                status_code=403,
+                detail="Your school is currently inactive. Please contact the administrator."
+            )
 
     payload = {
         "user_id": user.UserId,

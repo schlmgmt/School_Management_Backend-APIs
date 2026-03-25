@@ -1,15 +1,16 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from ..db.database import get_db
-from ..schemas.input.school_input import SchoolCreateRequest
+from ..schemas.input.school_input import SchoolCreateRequest, SchoolUpdateRequest, SchoolStatusRequest
 from ..schemas.input.admin_input import CreateSchoolAdminRequest
 from ..schemas.output.school_output import SchoolResponse
 from ..schemas.output.admin_output import SchoolAdminResponse
-from ..services.school_service import create_school, get_all_schools, create_school_admin
+from ..services.school_service import create_school, get_all_schools, create_school_admin, update_school, toggle_school_status
 from ..core.dependencies import require_role
 
 SUPER_ADMIN = 1
+ADMIN = 2
 
 router = APIRouter(prefix="/schools", tags=["Schools"])
 
@@ -63,4 +64,63 @@ def add_school_admin(
         school_id=data.school_id,
         created_by_user_id=user.get("user_id"),
         reset_password_base_url=reset_password_base_url
+    )
+
+
+@router.put("/edit/{school_id}", response_model=SchoolResponse)
+def edit_school(
+    school_id: int,
+    data: SchoolUpdateRequest,
+    db: Session = Depends(get_db),
+    user=Depends(require_role([SUPER_ADMIN, ADMIN]))
+):
+    """
+    Edit school details.
+    
+    Authorization:
+    - Super Admin can edit all schools
+    - Admin can edit only their own school
+    
+    Parameters:
+    - school_id: ID of the school to edit
+    - data: School update data (all fields are optional)
+    """
+    user_role = user.get("role")
+    user_school_id = user.get("school_id")
+    
+    # Authorization check
+    if user_role == ADMIN and user_school_id != school_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Admins can only edit their own school"
+        )
+    
+    return update_school(
+        db=db,
+        school_id=school_id,
+        school_name=data.school_name,
+        address=data.address,
+        phone_number=data.phone_number,
+        email=data.email
+    )
+
+
+@router.patch("/{school_id}/status", response_model=SchoolResponse)
+def change_school_status(
+    school_id: int,
+    data: SchoolStatusRequest,
+    db: Session = Depends(get_db),
+    user=Depends(require_role([SUPER_ADMIN]))
+):
+    """
+    Activate or deactivate a school. Only Super Admin can perform this action.
+    
+    Parameters:
+    - school_id: ID of the school to activate/deactivate
+    - data: Contains is_active boolean (true to activate, false to deactivate)
+    """
+    return toggle_school_status(
+        db=db,
+        school_id=school_id,
+        is_active=data.is_active
     )

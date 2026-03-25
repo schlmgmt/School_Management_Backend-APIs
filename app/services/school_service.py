@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from datetime import datetime
 from ..db.models.school import School
 from ..db.models.user import User
 from ..core.security import hash_password, generate_temp_password, generate_password_reset_token
@@ -145,4 +146,123 @@ def create_school_admin(
         "is_password_updated": new_admin.IsPasswordUpdated,
         "created_at": new_admin.CreatedAt,
         "message": "Admin created successfully. Onboarding email has been sent."
+    }
+
+
+def get_school_by_id(db: Session, school_id: int):
+    """
+    Get school by ID.
+    
+    Args:
+        db: Database session
+        school_id: School ID to fetch
+    
+    Returns:
+        School object or raises HTTPException if not found
+    """
+    school = db.query(School).filter(School.SchoolId == school_id).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+    
+    return school
+
+
+def update_school(
+    db: Session,
+    school_id: int,
+    school_name: str = None,
+    address: str = None,
+    phone_number: str = None,
+    email: str = None
+):
+    """
+    Update school details.
+    
+    Args:
+        db: Database session
+        school_id: School ID to update
+        school_name: New school name (optional)
+        address: New address (optional)
+        phone_number: New phone number (optional)
+        email: New email (optional)
+    
+    Returns:
+        Updated school object
+    """
+    # Check if school exists
+    school = db.query(School).filter(School.SchoolId == school_id).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+    
+    # Check for unique constraints if updating school_name or email
+    if school_name and school_name != school.SchoolName:
+        existing = db.query(School).filter(School.SchoolName == school_name).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="School with this name already exists")
+        school.SchoolName = school_name
+    
+    if email and email != school.Email:
+        existing = db.query(School).filter(School.Email == email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="School with this email already exists")
+        school.Email = email
+    
+    # Update optional fields
+    if address is not None:
+        school.Address = address
+    
+    if phone_number is not None:
+        school.PhoneNumber = phone_number
+    
+    # Update the UpdatedAt timestamp
+    school.UpdatedAt = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(school)
+    
+    return {
+        "school_id": school.SchoolId,
+        "school_name": school.SchoolName,
+        "address": school.Address,
+        "phone_number": school.PhoneNumber,
+        "email": school.Email,
+        "is_active": school.IsActive,
+        "created_at": school.CreatedAt,
+        "updated_at": school.UpdatedAt
+    }
+
+
+def toggle_school_status(db: Session, school_id: int, is_active: bool):
+    """
+    Activate or deactivate a school.
+    
+    Args:
+        db: Database session
+        school_id: School ID to update
+        is_active: Boolean value for active status
+    
+    Returns:
+        Updated school object
+    """
+    # Check if school exists
+    school = db.query(School).filter(School.SchoolId == school_id).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+    
+    # Update active status
+    school.IsActive = is_active
+    school.UpdatedAt = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(school)
+    
+    return {
+        "school_id": school.SchoolId,
+        "school_name": school.SchoolName,
+        "address": school.Address,
+        "phone_number": school.PhoneNumber,
+        "email": school.Email,
+        "is_active": school.IsActive,
+        "created_at": school.CreatedAt,
+        "updated_at": school.UpdatedAt
     }
