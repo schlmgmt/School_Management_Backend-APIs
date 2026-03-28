@@ -52,7 +52,7 @@ def create_new_teacher(
     Returns teacher creation details including teacher_id, user_id, and confirmation message
     """
     admin_school_id = user.get("school_id")
-    reset_password_base_url = "http://yourapp.com/reset-password"  # Update with your actual frontend URL
+    reset_password_base_url = "exp://localhost/reset-password"  # Update with your actual frontend URL
     
     return create_teacher_with_user(
         db=db,
