@@ -31,7 +31,7 @@ def forgot_password_endpoint(data: ForgotPasswordRequest, db: Session = Depends(
     Sends password reset link to the email address.
     No authentication required.
     """
-    reset_password_base_url = "https://yourdomain.com/reset-password"  # Update with your actual frontend URL
+    reset_password_base_url = "exp://localhost/reset-password"  # Update with your actual frontend URL
     
     return forgot_password(db, data.email, reset_password_base_url)
 
