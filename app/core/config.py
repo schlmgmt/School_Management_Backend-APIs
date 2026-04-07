@@ -15,5 +15,8 @@ class Settings:
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
     SENDER_EMAIL: str = os.getenv("SMTP_USER", "")
     SENDER_PASSWORD: str = os.getenv("SMTP_PASS", "")
+    
+    # Password Reset Configuration
+    RESET_PASSWORD_BASE_URL: str = os.getenv("RESET_PASSWORD_BASE_URL", "http://localhost:3000/reset-password")
 
 settings = Settings()

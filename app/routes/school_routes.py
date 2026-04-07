@@ -54,16 +54,13 @@ def add_school_admin(
     - Onboarding email sent with password reset link
     - Admin must click link and reset password to set IsPasswordUpdated = true
     """
-    reset_password_base_url = "exp://localhost/reset-password"  # Update with your actual frontend URL
-    
     return create_school_admin(
         db=db,
         admin_name=data.admin_name,
         admin_email=data.admin_email,
         phone_number=data.phone_number,
         school_id=data.school_id,
-        created_by_user_id=user.get("user_id"),
-        reset_password_base_url=reset_password_base_url
+        created_by_user_id=user.get("user_id")
     )
 
 

@@ -68,8 +68,8 @@ def create_school_admin(
     admin_email: str,
     phone_number: str,
     school_id: int,
-    created_by_user_id: int,
-    reset_password_base_url: str
+
+    created_by_user_id: int
 ):
     """
     Create a school admin with temporary password and send onboarding email.
@@ -81,7 +81,6 @@ def create_school_admin(
         phone_number: Phone number of the admin
         school_id: School ID to assign the admin to
         created_by_user_id: User ID of the super admin creating this admin
-        reset_password_base_url: Base URL for password reset link (e.g., http://yourapp.com/reset-password)
     
     Returns:
         Admin user object
@@ -121,15 +120,12 @@ def create_school_admin(
     # Generate password reset token with the new admin's ID
     reset_token = generate_password_reset_token(new_admin.UserId, admin_email)
     
-    # Create reset password link
-    reset_password_link = f"{reset_password_base_url}?token={reset_token}"
-    
-    # Send onboarding email
+    # Send onboarding email with token only
     email_sent = send_admin_onboarding_email(
         admin_email=admin_email,
         admin_name=admin_name,
         temp_password=temp_password,
-        reset_password_link=reset_password_link
+        reset_token=reset_token
     )
     
     if not email_sent:
